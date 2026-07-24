@@ -6,19 +6,21 @@
    فقط کافیست عدد CACHE_VERSION را افزایش دهید (مثلاً v6 -> v7).
    با این کار کش قدیمی به‌طور خودکار حذف و نسخه جدید جایگزین می‌شود.
    ============================================================ */
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v10';
 const CACHE_NAME = `abfa-fars-tables-${CACHE_VERSION}`;
 
 // فایل‌های اصلی برنامه (App Shell) که باید برای اجرای کامل آفلاین کش شوند
 const APP_SHELL = [
   './',
   './index.html',
+  './styles.css',
+  './app.js',
   './manifest.json',
-  './icon.svg'
+  './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-512-maskable.png'
 ];
-
-// دامنه‌های فونت گوگل که به‌صورت پویا (Runtime) کش می‌شوند
-const RUNTIME_HOSTS = new Set(['fonts.googleapis.com', 'fonts.gstatic.com']);
 
 /* ---------------------- نصب: کش کردن App Shell ---------------------- */
 self.addEventListener('install', (event) => {
@@ -69,7 +71,7 @@ self.addEventListener('message', (event) => {
 /* ------------------------- استراتژی واکشی ------------------------- */
 /* Stale-While-Revalidate: پاسخ کش‌شده فوراً نمایش داده می‌شود (سرعت بالا)
    و هم‌زمان نسخه جدید از شبکه گرفته و برای دفعه بعد در کش ذخیره می‌شود.
-   برای فایل‌های داخلی برنامه و همچنین فونت‌های گوگل (کراس-اورجین) کار می‌کند. */
+   فقط برای درخواست‌های هم‌مبدأ (فایل‌های داخلی برنامه) اجرا می‌شود. */
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -85,8 +87,7 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
   const isSameOrigin = url.origin === self.location.origin;
-  const isKnownRuntimeHost = RUNTIME_HOSTS.has(url.hostname);
-  if (!isSameOrigin && !isKnownRuntimeHost) return;
+  if (!isSameOrigin) return;
 
   event.respondWith(
     (async () => {
@@ -98,8 +99,8 @@ self.addEventListener('fetch', (event) => {
 
       const networkFetch = fetch(request)
         .then((response) => {
-          // پاسخ‌های موفق (200) یا opaque (فونت‌های کراس-اورجین بدون CORS) کش می‌شوند
-          if (response && (response.status === 200 || response.type === 'opaque')) {
+          // پاسخ‌های موفق (200) کش می‌شوند
+          if (response && response.status === 200) {
             cache.put(request.mode === 'navigate' ? './index.html' : request, response.clone());
           }
           return response;
