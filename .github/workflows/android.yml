@@ -47,18 +47,25 @@ jobs:
         run: |
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           JDK_PATH=$(dirname $(dirname $(readlink -f $(which java))))
-          bubblewrap updateConfig \
-            --jdkPath="$JDK_PATH" \
-            --androidSdkPath="$ANDROID_SDK_ROOT"
+          mkdir -p ~/.bubblewrap
+          cat > ~/.bubblewrap/config.json <<EOF
+          {
+            "jdkPath": "$JDK_PATH",
+            "androidSdkPath": "$ANDROID_SDK_ROOT"
+          }
+          EOF
+          cat ~/.bubblewrap/config.json
 
       - name: Create Bubblewrap project
         run: |
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
           mkdir -p android
           cd android
-          bubblewrap init --manifest=https://majidamirizadeh.github.io/TestAbfaAmiri/manifest.json
+          bubblewrap init --manifest=https://majidamirizadeh.github.io/TestAbfaAmiri/manifest.json < /dev/null
 
       - name: Build Android
         run: |
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
           cd android
           bubblewrap build --skipSigning
 
