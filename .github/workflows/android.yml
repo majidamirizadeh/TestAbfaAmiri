@@ -1,0 +1,47 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Create Bubblewrap project
+        run: |
+          mkdir android
+          cd android
+          yes '' | bubblewrap init --manifest=https://majidamirizadeh.github.io/TestAbfaAmiri/manifest.json
+
+      - name: Build Android
+        run: |
+          cd android
+          bubblewrap build --skipSigning
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ABFA-Test-APK
+          path: |
+            android/app-release-unsigned.apk
+            android/app-release-signed.apk
+            android/app-release-bundle.aab
+          if-no-files-found: warn
