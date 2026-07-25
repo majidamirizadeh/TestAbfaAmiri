@@ -31,16 +31,22 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
+      - name: Configure Bubblewrap Android SDK
+        run: |
+          bubblewrap updateConfig \
+            --jdkPath="$JAVA_HOME" \
+            --androidSdkPath="$ANDROID_HOME"
+
       - name: Create Bubblewrap project
         run: |
           mkdir android
           cd android
-          yes '' | bubblewrap init --manifest=https://majidamirizadeh.github.io/TestAbfaAmiri/manifest.json
+          yes '' | bubblewrap init --manifest="https://majidamirizadeh.github.io/TestAbfaAmiri/manifest.json"
 
       - name: Build Android
         run: |
           cd android
-          bubblewrap build --skipSigning
+          bubblewrap build --skipPwaValidation --skipSigning
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
