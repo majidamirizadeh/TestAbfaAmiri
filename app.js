@@ -1036,19 +1036,15 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
     }, 1100);
   }
 
-  // کلیدی که در localStorage نشان می‌دهد این مرورگر/دستگاه قبلاً برنامه را با موفقیت نصب کرده است.
-  // بدون این پرچم، هر بار که beforeinstallprompt دوباره فایر شود (که در برخی نسخه‌های کروم برای
-  // برنامه‌های از قبل نصب‌شده هم رخ می‌دهد) پاپ‌آپ نصب ما دوباره باز می‌شد و همزمان خود کروم پیام
-  // «این برنامه قبلاً نصب شده» را نشان می‌داد؛ نتیجه، دو باکس همزمان و گیج‌کننده و در برخی موارد
-  // ساخت یک میانبر ساده به‌جای نصب کامل بود.
-  const INSTALLED_KEY = 'abfa_pwa_installed';
-  function isMarkedInstalled(){
-    try{ return localStorage.getItem(INSTALLED_KEY) === '1'; }catch(e){ return false; }
-  }
-  function markInstalled(){
-    try{ localStorage.setItem(INSTALLED_KEY, '1'); }catch(e){}
-  }
-
+  // نکته فنی درباره حذف پرچم localStorage قبلی:
+  // نسخه‌های پیشین این کد، بعد از اولین نصب موفق، یک پرچم در localStorage ثبت می‌کرد و
+  // تا ابد پاپ‌آپ خودکار نصب را سرکوب می‌کرد. مشکل این بود که localStorage با حذف برنامه
+  // از گوشی پاک نمی‌شود (چون به مرورگر تعلق دارد، نه به برنامه نصب‌شده)؛ نتیجه این بود که
+  // حتی بعد از Uninstall کامل، پاپ‌آپ دیگر هرگز دوباره ظاهر نمی‌شد. رفع شد: تصمیم‌گیری
+  // درباره نمایش پاپ‌آپ اکنون فقط بر اساس سیگنال زنده‌ی خود مرورگر است (فایر شدن رویداد
+  // beforeinstallprompt)، نه یک پرچم ذخیره‌شده‌ی قدیمی. فراخوانی e.preventDefault() در ادامه
+  // به‌تنهایی کافی است تا بنر خودکار خود کروم نمایش داده نشود و به‌جایش پاپ‌آپ ما باز شود؛
+  // بنابراین نیازی به این پرچم دستی برای جلوگیری از تداخل دو پاپ‌آپ نبوده است.
   let autoInstallShownOnce = false;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -1058,8 +1054,6 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
     // پاپ‌آپ فقط یک‌بار در هر بارگذاری صفحه انجام می‌شود تا برای کاربر تکراری/دیرهنگام دیده نشود
     if(autoInstallShownOnce) return;
     autoInstallShownOnce = true;
-    // اگر قبلاً از همین دستگاه نصب موفق ثبت شده، پاپ‌آپ خودکار نصب دوباره نشان داده نمی‌شود
-    if(isMarkedInstalled()) return;
     setInstallModalNormalMode();
     openInstallModal();
   });
@@ -1095,11 +1089,9 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
 
   if (window.matchMedia('(display-mode: standalone)').matches) {
     hideInstallOverlays();
-    markInstalled(); // اگر برنامه به‌صورت standalone در حال اجراست، یعنی نصب واقعاً موفق بوده
   }
   window.addEventListener('appinstalled', ()=>{
     deferredPrompt = null;
-    markInstalled();
     // اگر نوار پیشرفت نصب در حال نمایش است، اجازه بده خودش با انیمیشن کامل شود و ببندد؛
     // اینجا فقط وقتی مودال/پیشرفت باز نیست (مثلاً نصب از منوی خود مرورگر) آن را می‌بندیم
     if(progressOverlay && progressOverlay.classList.contains('show')) return;
