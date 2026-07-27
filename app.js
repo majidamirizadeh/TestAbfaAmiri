@@ -892,7 +892,8 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
     // و اگر بعداً controllerchange رخ دهد، واقعاً یک بروزرسانی نسخه است؛ در غیر این صورت (اولین بازدید/اولین نصب)
     // اولین controllerchange صرفاً به‌دست‌گرفتن کنترل اولیه است، نه بروزرسانی، و نباید صفحه را رفرش کند
     const hadControllerBefore = !!navigator.serviceWorker.controller;
-    navigator.serviceWorker.register('sw.js').then((reg)=>{
+    // scope صریح './' و مسیر نسبی sw.js تا روی GitHub Pages شرایط نصب‌پذیری (installability) پایدار بماند
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).then((reg)=>{
       // وقتی نسخه جدید Service Worker نصب شد، آن را فعال کن تا کاربر همیشه آخرین نسخه را ببیند
       reg.addEventListener('updatefound', ()=>{
         const newWorker = reg.installing;
@@ -903,6 +904,8 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
           }
         });
       });
+      // آماده‌بودن SW به مرورگر سیگنال می‌دهد که معیارهای نصب PWA برقرار است
+      try{ navigator.serviceWorker.ready.catch(function(){}); }catch(_e){}
     }).catch(()=>{});
     // پس از فعال شدن نسخه جدید، صفحه یک‌بار به‌صورت خودکار تازه‌سازی می‌شود
     let swRefreshed = false;
@@ -1046,16 +1049,30 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
   // به‌تنهایی کافی است تا بنر خودکار خود کروم نمایش داده نشود و به‌جایش پاپ‌آپ ما باز شود؛
   // بنابراین نیازی به این پرچم دستی برای جلوگیری از تداخل دو پاپ‌آپ نبوده است.
   let autoInstallShownOnce = false;
+  function isStandaloneMode(){
+    try{
+      return window.matchMedia('(display-mode: standalone)').matches
+        || window.matchMedia('(display-mode: minimal-ui)').matches
+        || window.navigator.standalone === true;
+    }catch(e){ return false; }
+  }
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
+    // اگر همین الان داخل حالت نصب‌شده هستیم، پاپ‌آپ لازم نیست
+    if(isStandaloneMode()) return;
     // مرورگر گاهی این رویداد را بیش از یک‌بار در همان بارگذاری صفحه ارسال می‌کند؛
     // deferredPrompt هر بار به‌روزرسانی می‌شود (تا دکمه نصب همیشه معتبر بماند)، اما باز شدنِ خودکارِ
     // پاپ‌آپ فقط یک‌بار در هر بارگذاری صفحه انجام می‌شود تا برای کاربر تکراری/دیرهنگام دیده نشود
     if(autoInstallShownOnce) return;
     autoInstallShownOnce = true;
     setInstallModalNormalMode();
-    openInstallModal();
+    // کمی تأخیر تا Service Worker و UI صفحه کامل آماده شوند (جلوگیری از از دست رفتن deferredPrompt)
+    setTimeout(function(){
+      if(!deferredPrompt || isStandaloneMode()) return;
+      openInstallModal();
+    }, 600);
   });
 
   installBtn.addEventListener('click', async () => {
@@ -1065,7 +1082,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
       // مرورگر اجازه نصب واقعی (WebAPK) را هنوز صادر نکرده — به‌جای نمایش دروغین «نصب موفق»
       // که فقط یک میانبر ساده روی صفحه اصلی می‌سازد، کاربر را به روش دستی مرورگر راهنمایی می‌کنیم
       installBtn.disabled = false;
-      installModalDesc.textContent = 'نصب خودکار هم‌اکنون در دسترس نیست. از منوی مرورگر (⋮) گزینه «نصب برنامه / Install app» را انتخاب کنید، یا چند ثانیه صبر کرده و دوباره تلاش کنید.';
+      installModalDesc.textContent = 'نصب خودکار هم‌اکنون در دسترس نیست. از منوی مرورگر (⋮) گزینه «نصب برنامه / Install app» را انتخاب کنید (نه «افزودن به صفحه اصلی»). چند ثانیه صبر کرده و دوباره تلاش کنید.';
       return;
     }
 
@@ -1087,7 +1104,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
   installOverlay.addEventListener('click', (e)=>{ if(e.target === installOverlay) closeInstallModal(); });
   document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeInstallModal(); });
 
-  if (window.matchMedia('(display-mode: standalone)').matches) {
+  if (isStandaloneMode()) {
     hideInstallOverlays();
   }
   window.addEventListener('appinstalled', ()=>{
