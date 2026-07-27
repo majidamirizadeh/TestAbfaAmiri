@@ -952,6 +952,21 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
   const progressIcon = document.getElementById('installProgressIcon');
   if(!installOverlay || !installBtn) return;
 
+  // ===== تشخیص اجرا داخل APK بسته‌بندی‌شده (TWA) =====
+  // وقتی این PWA با ابزارهایی مثل Bubblewrap یا PWABuilder به یک اپ اندرویدی (APK) تبدیل می‌شود،
+  // اندروید صفحه را داخل یک Trusted Web Activity باز می‌کند که همیشه referrer آن دقیقاً برابر است با
+  // چیزی که با «android-app://» شروع می‌شود؛ این تنها سیگنال قابل‌اعتماد برای تشخیص «اجرای واقعی از
+  // داخل همان اپ نصب‌شده APK» است (برخلاف isStandaloneMode در پایین همین فایل که یک PWA نصب‌شده معمولی
+  // از طریق مرورگر را هم standalone تشخیص می‌دهد). در این حالت برنامه از قبل به‌صورت اپ اندروید نصب شده
+  // است، پس کل مودال/درخواست نصب PWA (که فقط برای صفحه باز در مرورگر معنا دارد) باید کاملاً غیرفعال بماند
+  // تا نه دوباره تلاش به نصب کند و نه میانبر تکراری بسازد؛ این بخش فقط داخل مرورگر معمولی فعال می‌ماند.
+  function isPackagedApk(){
+    try{
+      return typeof document.referrer === 'string' && document.referrer.indexOf('android-app://') === 0;
+    }catch(e){ return false; }
+  }
+  if(isPackagedApk()) return;
+
   function toFaLocal(n){
     try{ return typeof toFa === 'function' ? toFa(n) : String(n); }catch(e){ return String(n); }
   }
